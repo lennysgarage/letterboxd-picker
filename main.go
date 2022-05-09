@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
+	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gocolly/colly"
 )
@@ -35,7 +38,10 @@ func fetchWatchlist(username string) [][]string {
 	var movies [][]string
 	c := colly.NewCollector(
 		colly.AllowedDomains("letterboxd.com"),
+		colly.Async(true),
 	)
+
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
 
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting: ", r.URL.String())
@@ -60,6 +66,7 @@ func fetchWatchlist(username string) [][]string {
 
 	c.Visit(fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", username))
 
+	c.Wait()
 	return movies
 }
 
@@ -95,15 +102,25 @@ func fetchMoviePhoto(movieLink string) string {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.GET("/api", func(c *gin.Context) {
 		username := c.Query("username")
 		movies := fetchWatchlist(username)
-		randomMovie := chooseMovie(movies)
-		randomMovie.ImageLink = fetchMoviePhoto(randomMovie.Link)
-
-		c.JSON(http.StatusOK, randomMovie)
+		if len(movies) != 0 {
+			randomMovie := chooseMovie(movies)
+			randomMovie.ImageLink = fetchMoviePhoto(randomMovie.Link)
+			c.JSON(http.StatusOK, randomMovie)
+		} else {
+			c.Status(http.StatusNotFound)
+		}
 	})
 
-	router.Run("localhost:8080")
+	router.Run(":" + port)
 }
