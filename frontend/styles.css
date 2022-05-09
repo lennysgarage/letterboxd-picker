@@ -1,0 +1,41 @@
+#info {
+    color: #abc;
+}
+
+#submitButton {
+    background-color: #00b020;
+    color: #f4fcf0;
+    font-weight: bold;
+}
+
+#submitButton:hover {
+    background-color: #00bdfa;
+}
+
+
+#letterboxd-link {
+    text-decoration: none;
+    color: #f4fcf0;
+}
+
+#letterboxd-link:hover {
+    color: #00b020;
+}
+
+.movie-poster {
+    display: block; 
+    width: 230px; 
+    height: 345px;
+    margin: auto;
+}
+
+.movie-poster:hover {
+    border-color: aqua;
+    border-radius: 4px;
+    outline: 2px solid aqua;
+}
+
+
+body {
+    background-color: rgb(20, 24, 28);
+}
