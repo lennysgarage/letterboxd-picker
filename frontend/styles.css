@@ -12,6 +12,10 @@
     background-color: #00bdfa;
 }
 
+#spinner {
+    margin-right: 0.3em;
+    margin-top: auto;
+}
 
 #letterboxd-link {
     text-decoration: none;
@@ -22,7 +26,31 @@
     color: #00b020;
 }
 
+#movieTitle, #missingMovie {
+    color: #abc;
+    text-align: center;
+    margin-top: 4;
+    font-size: 200%;
+}
+
+#notFound {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+}
+
+#movieTitleLink:hover {
+    color: #00b020;
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
 .movie-poster {
+    max-width:100%;
     display: block; 
     width: 230px; 
     height: 345px;
@@ -35,6 +63,8 @@
     outline: 2px solid aqua;
 }
 
+
+img {max-width:100%;}
 
 body {
     background-color: rgb(20, 24, 28);
