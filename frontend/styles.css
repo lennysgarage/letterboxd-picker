@@ -73,8 +73,6 @@ a {
 }
 
 .movie-poster {
-    /* max-width: 100%; */
-    /* min-width: 25%; */
     display: block; 
     width: 230px; 
     height: 345px;
@@ -87,8 +85,6 @@ a {
     outline: 2px solid aqua;
 }
 
-
-/* img {max-width:100%;} */
 
 body {
     background-color: rgb(20, 24, 28);

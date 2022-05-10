@@ -15,12 +15,11 @@ function sendRequest() {
             let movie = document.getElementById("movie-container");
             if (response.status === 200) {
                 const content = await response.json();
-                let movieTitle = content.title.replace(/-/g, " ");
                 movie.innerHTML = `<a 
                     class="movie-poster" 
                     href="${content.movielink}" 
                     style="background-image: url('${content.imagelink}');"></a>
-                    <p id="movieTitle">You should watch <a id="movieTitleLink" href="${content.movielink}">${movieTitle.charAt(0).toUpperCase() + movieTitle.slice(1)}</a></p>`
+                    <p id="movieTitle">You should watch <a id="movieTitleLink" href="${content.movielink}">${content.title}</a></p>`
             } else {
                 movie.innerHTML = `<p id="missingMovie">Sorry that watchlist does not exist.</p>
                 <img class="not-found" src="404-not-found.gif" alt="20th century fox intro, replaced with 404 Not found error.">`;
