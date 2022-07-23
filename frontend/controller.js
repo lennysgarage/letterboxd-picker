@@ -5,13 +5,23 @@ hideLoading();
 function sendRequest() {
     return async function(e) {
         e.preventDefault();
-        let username = document.getElementById('username').value;
-        if (username !== '') {
+        let usernames = document.getElementById('username').value.split(" ");
+        if (usernames.length !== 0) {
             showLoading();
-            // development: http://localhost:8080/api?username=${username}
-            // production: https://letterboxd-picker-api.herokuapp.com/api?username=${username}
-            const response = await fetch(`https://letterboxd-picker-api.herokuapp.com/api?username=${username}`);
+            // development: 
+            // let urlString = "http://localhost:8080/api?";
+            // production: 
+            let urlString = "https://letterboxd-picker-api.herokuapp.com/api?";
+            usernames.forEach((username) => {
+                urlString += "username=" + username + "&";
+            })
+            if (getType() === "intersection") {
+                urlString += "i=true";
+            }
+
+            const response = await fetch(urlString)
             hideLoading();
+
             let movie = document.getElementById("movie-container");
             if (response.status === 200) {
                 const content = await response.json();
@@ -34,4 +44,11 @@ function showLoading() {
 
 function hideLoading() {
     document.getElementById('submitButton').innerHTML = 'SUBMIT';
+}
+
+function getType() {
+    if (document.querySelector('input[id="intersection"]:checked') !== null) {
+        return "intersection";
+    }
+    return "union";
 }

@@ -22,8 +22,13 @@ p {font-size:1rem;}
 }
 
 
-#info {
+#info, #unionAndIntersectionLabel {
     color: #abc;
+}
+
+#union, #intersection {
+    padding-left: 1rem;
+    margin-left: 1rem;
 }
 
 #submitButton {
