@@ -27,7 +27,10 @@ func fetchWatchlist(username string) []string {
 		colly.Async(true),
 	)
 
-	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
+	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
+	if err != nil {
+		log.Println("Failed to setup colly limit ", err)
+	}
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting: ", r.URL.String())
@@ -36,7 +39,10 @@ func fetchWatchlist(username string) []string {
 	// Fetch next page of watchlist
 	c.OnHTML(".pagination", func(e *colly.HTMLElement) {
 		nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
-		c.Visit(e.Request.AbsoluteURL(nextPage))
+		err = c.Visit(e.Request.AbsoluteURL(nextPage))
+		if err != nil {
+			log.Println("Failed to visit absoluteURL ", err)
+		}
 	})
 
 	// Find all movies in watchlist
@@ -49,7 +55,10 @@ func fetchWatchlist(username string) []string {
 		movies = append(movies, movie.Link)
 	})
 
-	c.Visit(fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", username))
+	err = c.Visit(fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", username))
+	if err != nil {
+		log.Println("Failed to visit watchlist page 1 ", err)
+	}
 
 	c.Wait()
 	return movies
@@ -86,24 +95,26 @@ func fetchMovieInfo(movieLink string) (string, string) {
 		}
 	})
 
-	c.Visit(movieLink)
+	err := c.Visit(movieLink)
+	if err != nil {
+		log.Println("Failed visiting ", err)
+	}
 	return movieImgLink, movieTitle
 }
 
-func intersectWatchlists(watchlistA, watchlistB []string) []string {
+func intersectWatchlists(watchlist []string, numUsers int) []string {
 	intersection := make([]string, 0)
-	hash := make(map[string]bool)
+	hash := make(map[string]int)
 
-	for _, movie := range watchlistA {
-		hash[movie] = true
+	for _, movie := range watchlist {
+		hash[movie] += 1
 	}
 
-	for _, movie := range watchlistB {
-		if hash[movie] {
+	for movie, count := range hash {
+		if count == numUsers {
 			intersection = append(intersection, movie)
 		}
 	}
-
 	return intersection
 }
 
@@ -124,21 +135,21 @@ func main() {
 
 		// atm limited to 2 users
 		var movieList []string
-		if len(usernames) == 2 && intersection == "true" {
-			var allMovies [][]string
-			// Fetch both user's watchlists
+		if len(usernames) > 1 && intersection == "true" {
+			var allMovies []string
+			// Fetch all user's watchlists
 			for _, username := range usernames {
 				wg.Add(1)
 
 				go func(username string) {
 					defer wg.Done()
 					movies := fetchWatchlist(username)
-					allMovies = append(allMovies, movies)
+					allMovies = append(allMovies, movies...)
 				}(username)
 			}
 			wg.Wait()
 			// Create intersected watchlist
-			movieList = intersectWatchlists(allMovies[0], allMovies[1])
+			movieList = intersectWatchlists(allMovies, len(usernames))
 		} else { // Union
 			// Pick a random user
 			user := usernames[rand.Intn(len(usernames))]
@@ -156,5 +167,8 @@ func main() {
 		}
 	})
 
-	router.Run(":" + port)
+	err := router.Run(":" + port)
+	if err != nil {
+		log.Println("server crashed ", err)
+	}
 }
