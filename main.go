@@ -33,7 +33,7 @@ func fetchWatchlist(username string) []string {
 	}
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting: ", r.URL.String())
+		fmt.Println("Visiting:", r.URL.String())
 	})
 
 	// Fetch next page of watchlist
@@ -41,7 +41,7 @@ func fetchWatchlist(username string) []string {
 		nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
 		err = c.Visit(e.Request.AbsoluteURL(nextPage))
 		if err != nil {
-			log.Println("Failed to visit absoluteURL ", err)
+			log.Println("Failed to visit absoluteURL", err)
 		}
 	})
 
@@ -57,7 +57,7 @@ func fetchWatchlist(username string) []string {
 
 	err = c.Visit(fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", username))
 	if err != nil {
-		log.Println("Failed to visit watchlist page 1 ", err)
+		log.Println("Failed to visit watchlist page 1", err)
 	}
 
 	c.Wait()
@@ -79,7 +79,7 @@ func fetchMovieInfo(movieLink string) (string, string) {
 		colly.AllowedDomains("letterboxd.com"),
 	)
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting: ", r.URL.String())
+		fmt.Println("Visiting:", r.URL.String())
 	})
 
 	// Fetch movie title
@@ -97,7 +97,7 @@ func fetchMovieInfo(movieLink string) (string, string) {
 
 	err := c.Visit(movieLink)
 	if err != nil {
-		log.Println("Failed visiting ", err)
+		log.Println("Failed visiting", err)
 	}
 	return movieImgLink, movieTitle
 }
@@ -133,7 +133,6 @@ func main() {
 		usernames := c.QueryArray("username")
 		intersection := c.Query("i")
 
-		// atm limited to 2 users
 		var movieList []string
 		if len(usernames) > 1 && intersection == "true" {
 			var allMovies []string
@@ -169,6 +168,6 @@ func main() {
 
 	err := router.Run(":" + port)
 	if err != nil {
-		log.Println("server crashed ", err)
+		log.Println("server crashed", err)
 	}
 }
