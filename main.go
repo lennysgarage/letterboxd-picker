@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/gin-contrib/cors"
@@ -77,28 +78,25 @@ func fetchMovieInfo(movieLink string) (string, string) {
 	var movieImgLink, movieTitle string
 	c := colly.NewCollector(
 		colly.AllowedDomains("letterboxd.com"),
+		colly.Async(true),
 	)
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting:", r.URL.String())
 	})
 
-	// Fetch movie title
-	c.OnHTML("meta[property='og:title']", func(e *colly.HTMLElement) {
-		movieTitle = e.Attr("content")
+	// Fetch movie poster title & link
+	c.OnHTML("div.film-poster", func(e *colly.HTMLElement) {
+		movieTitle = e.Attr("data-film-name")
+		movieImgLink = e.ChildAttr("img", "src")
 	})
 
-	// Fetch movie poster link
-	c.OnHTML("#js-poster-col > section.poster-list.-p230.-single.no-hover.el.col > div", func(e *colly.HTMLElement) {
-		temp := e.ChildAttr("img", "src")
-		if temp != "" {
-			movieImgLink = temp
-		}
-	})
-
+	movieLink = "https://letterboxd.com/ajax/poster/" + strings.TrimPrefix(movieLink, "https://letterboxd.com/") + "std/230x345/"
 	err := c.Visit(movieLink)
 	if err != nil {
 		log.Println("Failed visiting", err)
 	}
+
+	c.Wait()
 	return movieImgLink, movieTitle
 }
 
