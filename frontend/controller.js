@@ -1,17 +1,20 @@
 document.getElementsByTagName('form').item(0).addEventListener('submit', sendRequest());
 
+// document.getElementsByName('unionAndIntersection').forEach((btn) => btn.addEventListener('onClick', func(btn)))
+
 hideLoading();
 
 function sendRequest() {
     return async function(e) {
         e.preventDefault();
-        let usernames = document.getElementById('username').value.split(" ");
-        if (usernames.length !== 0) {
+        let usernames = document.getElementById('username').value.trim().split(" ", 6); // limit to 6 users
+        if (usernames?.length > 0 && usernames[0] !== '') {
             showLoading();
             // development: 
             // let urlString = "http://localhost:8080/api?";
             // production: 
-            let urlString = "https://letterboxd-picker-api.herokuapp.com/api?";
+            let urlString = "https://letterboxd-picker-api.herokuapp.com/api?";    
+            
             usernames.forEach((username) => {
                 urlString += "username=" + username + "&";
             })
@@ -19,6 +22,7 @@ function sendRequest() {
                 urlString += "i=true";
             }
 
+            console.log("url: " + urlString)
             const response = await fetch(urlString)
             hideLoading();
 

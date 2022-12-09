@@ -39,10 +39,13 @@
 
     <div class="row d-flex justify-content-center">
         <div class="text-center">
-            <input class="form-check-input" type="radio" name="unionAndIntersection" id="union" checked>
-            <label class="form-check-label" for="union" id="unionAndIntersectionLabel">UNION</label>
-            <input class="form-check-input" type="radio" name="unionAndIntersection" id="intersection">
-            <label class="form-check-label" for="intersection" id="unionAndIntersectionLabel">INTERSECTION</label>
+            <div class="btn-group">
+                <input type="radio" class="btn-check" name="unionAndIntersectionLabel" id="union" autocomplete="off" checked>
+                <label class="btn btn-outline-secondary" for="union">UNION</label>
+            
+                <input type="radio" class="btn-check" name="unionAndIntersectionLabel" id="intersection" autocomplete="off">
+                <label class="btn btn-outline-secondary" for="intersection">INTERSECTION</label>
+            </div>
         </div>
     </div>
 
