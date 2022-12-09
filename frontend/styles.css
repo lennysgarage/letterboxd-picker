@@ -82,6 +82,7 @@ a {
     width: 230px; 
     height: 345px;
     margin: auto;
+    margin-top: .6rem;
 }
 
 .movie-poster:hover {
