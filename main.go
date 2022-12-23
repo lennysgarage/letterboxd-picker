@@ -21,17 +21,21 @@ type Movie struct {
 	ImageLink string `json:"imagelink"`
 }
 
-func fetchWatchlist(username string) []string {
+func fetchList(link string) []string {
 	var movies []string
 	c := colly.NewCollector(
 		colly.AllowedDomains("letterboxd.com"),
 		colly.Async(true),
 	)
 
+	// Determines if a link to a list or a username.
+	link = formatInput(link)
+
 	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
 	if err != nil {
-		log.Println("Failed to setup colly limit ", err)
+		log.Fatal("Failed to setup colly limit ", err)
 	}
+
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting:", r.URL.String())
@@ -56,13 +60,21 @@ func fetchWatchlist(username string) []string {
 		movies = append(movies, movie.Link)
 	})
 
-	err = c.Visit(fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", username))
+	err = c.Visit(link)
 	if err != nil {
-		log.Println("Failed to visit watchlist page 1", err)
+		log.Fatal("Failed to visit webpage", err)
 	}
 
 	c.Wait()
 	return movies
+}
+
+func formatInput(s string) string {
+	if strings.HasPrefix(s, "http") {
+		return s
+	}
+
+	return fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", s)
 }
 
 func chooseMovie(movies []string) Movie {
@@ -100,7 +112,7 @@ func fetchMovieInfo(movieLink string) (string, string) {
 	return movieImgLink, movieTitle
 }
 
-func intersectWatchlists(watchlist []string, numUsers int) []string {
+func intersectLists(watchlist []string, numUsers int) []string {
 	intersection := make([]string, 0)
 	hash := make(map[string]int)
 
@@ -128,7 +140,7 @@ func main() {
 	router := gin.Default()
 	router.Use(cors.Default())
 	router.GET("/api", func(c *gin.Context) {
-		usernames := c.QueryArray("username")
+		usernames := c.QueryArray("src")
 		intersection := c.Query("i")
 
 		var movieList []string
@@ -140,18 +152,18 @@ func main() {
 
 				go func(username string) {
 					defer wg.Done()
-					movies := fetchWatchlist(username)
+					movies := fetchList(username)
 					allMovies = append(allMovies, movies...)
 				}(username)
 			}
 			wg.Wait()
 			// Create intersected watchlist
-			movieList = intersectWatchlists(allMovies, len(usernames))
+			movieList = intersectLists(allMovies, len(usernames))
 		} else { // Union
 			// Pick a random user
 			user := usernames[rand.Intn(len(usernames))]
 			// Fetch single user's watchlist, equivalent to union since randomness
-			movieList = fetchWatchlist(user)
+			movieList = fetchList(user)
 		}
 
 		// Return movie
