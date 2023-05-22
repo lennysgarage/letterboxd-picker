@@ -28,26 +28,24 @@ func fetchList(link string) []string {
 		colly.Async(true),
 	)
 
+	c.OnError(func(e *colly.Response, err error) {
+		log.Println("Something went wrong: ", err)
+	})
+
 	// Determines if a link to a list or a username.
 	link = formatInput(link)
 
-	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
-	if err != nil {
-		log.Fatal("Failed to setup colly limit ", err)
-	}
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
 
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting:", r.URL.String())
+		log.Println("Visiting:", r.URL.String())
 	})
 
 	// Fetch next page of watchlist
 	c.OnHTML(".pagination", func(e *colly.HTMLElement) {
 		nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
-		err = c.Visit(e.Request.AbsoluteURL(nextPage))
-		if err != nil {
-			log.Println("Failed to visit absoluteURL", err)
-		}
+		c.Visit(e.Request.AbsoluteURL(nextPage))
 	})
 
 	// Find all movies in watchlist
@@ -60,12 +58,10 @@ func fetchList(link string) []string {
 		movies = append(movies, movie.Link)
 	})
 
-	err = c.Visit(link)
-	if err != nil {
-		log.Fatal("Failed to visit webpage", err)
-	}
+	c.Visit(link)
 
 	c.Wait()
+
 	return movies
 }
 
@@ -92,8 +88,13 @@ func fetchMovieInfo(movieLink string) (string, string) {
 		colly.AllowedDomains("letterboxd.com"),
 		colly.Async(true),
 	)
+
+	c.OnError(func(e *colly.Response, err error) {
+		log.Println("Something went wrong: ", err)
+	})
+
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting:", r.URL.String())
+		log.Println("Visiting:", r.URL.String())
 	})
 
 	// Fetch movie poster title & link
@@ -103,12 +104,10 @@ func fetchMovieInfo(movieLink string) (string, string) {
 	})
 
 	movieLink = "https://letterboxd.com/ajax/poster/" + strings.TrimPrefix(movieLink, "https://letterboxd.com/") + "std/230x345/"
-	err := c.Visit(movieLink)
-	if err != nil {
-		log.Println("Failed visiting", err)
-	}
+	c.Visit(movieLink)
 
 	c.Wait()
+
 	return movieImgLink, movieTitle
 }
 
@@ -117,7 +116,7 @@ func intersectLists(watchlist []string, numUsers int) []string {
 	hash := make(map[string]int)
 
 	for _, movie := range watchlist {
-		hash[movie] += 1
+		hash[movie]++
 	}
 
 	for movie, count := range hash {
@@ -178,6 +177,6 @@ func main() {
 
 	err := router.Run(":" + port)
 	if err != nil {
-		log.Println("server crashed", err)
+		log.Fatal("Server crashed unexpectedly ", err)
 	}
 }
