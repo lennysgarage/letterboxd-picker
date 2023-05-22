@@ -1,4 +1,4 @@
-# letterboxd-scraper
+# letterboxd-picker
 
 Start a webserever to pick a random film from a letterboxd watchlist or public list 
 
@@ -20,4 +20,4 @@ Start a webserever to pick a random film from a letterboxd watchlist or public l
     ```
 
 ## Example
-    ./letterboxd-scraper
+    ./letterboxd-picker
