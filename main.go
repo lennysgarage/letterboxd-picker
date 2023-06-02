@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -21,8 +22,7 @@ type Movie struct {
 	ImageLink string `json:"imagelink"`
 }
 
-func fetchList(link string) []string {
-	var movies []string
+func fetchRandomPage(link string) string {
 	c := colly.NewCollector(
 		colly.AllowedDomains("letterboxd.com"),
 		colly.Async(true),
@@ -42,11 +42,55 @@ func fetchList(link string) []string {
 		log.Println("Visiting:", r.URL.String())
 	})
 
-	// Fetch next page of watchlist
-	c.OnHTML(".pagination", func(e *colly.HTMLElement) {
-		nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
-		c.Visit(e.Request.AbsoluteURL(nextPage))
+	var page string
+	c.OnHTML(".pagination .paginate-pages", func(e *colly.HTMLElement) {
+		pages := e.ChildAttrs(".paginate-page a", "href")
+		splitLink := strings.Split(pages[len(pages)-1], "page/")
+		numPages, _ := strconv.Atoi(strings.Trim(splitLink[1], "/"))
+
+		randPage := rand.Intn(numPages) + 1
+		page = e.Request.AbsoluteURL(fmt.Sprintf("%s%s%d%s", splitLink[0], "page/", randPage, "/"))
 	})
+
+	c.Visit(link)
+
+	c.Wait()
+
+	return page
+}
+
+func fetchList(link string, everyPage bool) []string {
+	var movies []string
+	c := colly.NewCollector(
+		colly.AllowedDomains("letterboxd.com"),
+		colly.Async(true),
+	)
+
+	c.OnError(func(e *colly.Response, err error) {
+		log.Println("Something went wrong: ", err)
+	})
+
+	if everyPage {
+		// Determines if a link to a list or a username.
+		link = formatInput(link)
+	} else {
+		link = fetchRandomPage(link)
+	}
+
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
+
+	extensions.RandomUserAgent(c)
+	c.OnRequest(func(r *colly.Request) {
+		log.Println("Visiting:", r.URL.String())
+	})
+
+	if everyPage {
+		// Fetch next page of watchlist
+		c.OnHTML(".pagination", func(e *colly.HTMLElement) {
+			nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
+			c.Visit(e.Request.AbsoluteURL(nextPage))
+		})
+	}
 
 	// Find all movies in watchlist
 	c.OnHTML(".poster-list li", func(e *colly.HTMLElement) {
@@ -151,7 +195,7 @@ func main() {
 
 				go func(username string) {
 					defer wg.Done()
-					movies := fetchList(username)
+					movies := fetchList(username, true)
 					allMovies = append(allMovies, movies...)
 				}(username)
 			}
@@ -162,7 +206,7 @@ func main() {
 			// Pick a random user
 			user := usernames[rand.Intn(len(usernames))]
 			// Fetch single user's watchlist, equivalent to union since randomness
-			movieList = fetchList(user)
+			movieList = fetchList(user, false)
 		}
 
 		// Return movie
