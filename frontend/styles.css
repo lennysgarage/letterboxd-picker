@@ -83,6 +83,8 @@ a {
     height: 345px;
     margin: auto;
     margin-top: .6rem;
+    background-size: cover;
+    background-position: center;
 }
 
 .movie-poster:hover {
