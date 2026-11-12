@@ -15,3 +15,6 @@ letterboxd-picker
 # Dependency directories (remove the comment below to include it)
 # vendor/
 watchlist-*
+letterboxd-picker-linux
+letterboxd-picker-mac
+*:Zone.Identifier

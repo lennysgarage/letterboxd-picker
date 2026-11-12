@@ -42,7 +42,9 @@ func fetchRandomPage(link string) string {
 		log.Println("Visiting:", r.URL.String())
 	})
 
-	var page string
+	// Default to the input page when pagination markup is absent
+	// (single-page lists or markup changes) so Visit("") never happens.
+	page := link
 	c.OnHTML(".pagination .paginate-pages", func(e *colly.HTMLElement) {
 		pages := e.ChildAttrs(".paginate-page a", "href")
 		splitLink := strings.Split(pages[len(pages)-1], "page/")
@@ -93,8 +95,10 @@ func fetchList(link string, everyPage bool) []string {
 	}
 
 	// Find all movies in watchlist
-	c.OnHTML(".poster-list li", func(e *colly.HTMLElement) {
-		film := e.ChildAttr("div", "data-target-link")
+	// (letterboxd renders list items as div.react-component with
+	// data-target-link; the old .poster-list li markup is gone)
+	c.OnHTML("div[data-target-link]", func(e *colly.HTMLElement) {
+		film := e.Attr("data-target-link")
 
 		movie := Movie{}
 		movie.Link = "https://letterboxd.com" + film
@@ -141,13 +145,17 @@ func fetchMovieInfo(movieLink string) (string, string) {
 		log.Println("Visiting:", r.URL.String())
 	})
 
-	// Fetch movie poster title & link
-	c.OnHTML("div.film-poster", func(e *colly.HTMLElement) {
-		movieTitle = e.Attr("data-film-name")
-		movieImgLink = e.ChildAttr("img", "src")
+	// Fetch movie title & poster link
+	// (film pages expose stable OG tags; the old /ajax/poster/
+	// endpoint and data-film-name attribute are gone)
+	c.OnHTML(`meta[property="og:title"]`, func(e *colly.HTMLElement) {
+		movieTitle = e.Attr("content")
 	})
 
-	movieLink = "https://letterboxd.com/ajax/poster/" + strings.TrimPrefix(movieLink, "https://letterboxd.com/") + "std/230x345/"
+	c.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
+		movieImgLink = e.Attr("content")
+	})
+
 	c.Visit(movieLink)
 
 	c.Wait()
