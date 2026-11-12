@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -64,6 +65,15 @@ func fetchRandomPage(link string) string {
 
 func fetchList(link string, everyPage bool) []string {
 	var movies []string
+
+	// Determines if a link to a list or a username.
+	original := formatInput(link)
+	if everyPage {
+		link = original
+	} else {
+		link = fetchRandomPage(original)
+	}
+
 	c := colly.NewCollector(
 		colly.AllowedDomains("letterboxd.com"),
 		colly.Async(true),
@@ -73,14 +83,9 @@ func fetchList(link string, everyPage bool) []string {
 		log.Println("Something went wrong: ", err)
 	})
 
-	if everyPage {
-		// Determines if a link to a list or a username.
-		link = formatInput(link)
-	} else {
-		link = fetchRandomPage(link)
-	}
-
-	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4})
+	// letterboxd burst-blocks IPs that request pages too fast (HTTP 403);
+	// pace the pagination chain politely
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 4, Delay: 700 * time.Millisecond, RandomDelay: 300 * time.Millisecond})
 
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
@@ -88,7 +93,7 @@ func fetchList(link string, everyPage bool) []string {
 	})
 
 	if everyPage {
-		// Fetch next page of watchlist
+		// Fetch next page of list
 		c.OnHTML(".pagination", func(e *colly.HTMLElement) {
 			nextPage := e.ChildAttr(".paginate-nextprev a.next", "href")
 			c.Visit(e.Request.AbsoluteURL(nextPage))
@@ -111,21 +116,20 @@ func fetchList(link string, everyPage bool) []string {
 
 	c.Wait()
 
+	// letterboxd burst-blocks deep list pages (HTTP 403) when an IP has
+	// scraped aggressively lately; page 1 keeps working. If the randomly
+	// chosen page came up empty, retry once with page 1 of the same list.
+	if !everyPage && len(movies) == 0 && link != original {
+		log.Println("Chosen page came up empty, retrying with page 1")
+		c.Visit(original)
+		c.Wait()
+	}
+
 	return movies
 }
 
 func formatInput(s string) string {
 	if strings.HasPrefix(s, "http") {
-		// letterboxd returns HTTP 403 for deep pagination of profile
-		// /films/ pages; this tool picks from watchlists, so map any
-		// film-history link to that user's watchlist instead
-		if i := strings.Index(s, "/films/"); i != -1 {
-			parts := strings.Split(s[:i], "/")
-			user := parts[len(parts)-1]
-			if user != "" {
-				return fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", user)
-			}
-		}
 		return s
 	}
 
@@ -218,7 +222,7 @@ func main() {
 		var movieList []string
 		if len(usernames) > 1 && intersection == "true" {
 			var allMovies []string
-			// Fetch all user's watchlists
+			// Fetch all users' lists
 			for _, username := range usernames {
 				wg.Add(1)
 
@@ -234,7 +238,7 @@ func main() {
 		} else { // Union
 			// Pick a random user
 			user := usernames[rand.Intn(len(usernames))]
-			// Fetch single user's watchlist, equivalent to union since randomness
+			// Fetch one user's list, equivalent to union since randomness
 			movieList = fetchList(user, false)
 		}
 
