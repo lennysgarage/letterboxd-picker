@@ -116,6 +116,16 @@ func fetchList(link string, everyPage bool) []string {
 
 func formatInput(s string) string {
 	if strings.HasPrefix(s, "http") {
+		// letterboxd returns HTTP 403 for deep pagination of profile
+		// /films/ pages; this tool picks from watchlists, so map any
+		// film-history link to that user's watchlist instead
+		if i := strings.Index(s, "/films/"); i != -1 {
+			parts := strings.Split(s[:i], "/")
+			user := parts[len(parts)-1]
+			if user != "" {
+				return fmt.Sprintf("https://letterboxd.com/%s/watchlist/page/1/", user)
+			}
+		}
 		return s
 	}
 
