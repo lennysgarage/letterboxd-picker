@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -146,14 +147,24 @@ func fetchMovieInfo(movieLink string) (string, string) {
 	})
 
 	// Fetch movie title & poster link
-	// (film pages expose stable OG tags; the old /ajax/poster/
-	// endpoint and data-film-name attribute are gone)
+	// og:image is the 675x675 backdrop crop (not the poster); the real
+	// poster URL lives in the page's JSON-LD structured data ("image")
 	c.OnHTML(`meta[property="og:title"]`, func(e *colly.HTMLElement) {
 		movieTitle = e.Attr("content")
 	})
 
-	c.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
-		movieImgLink = e.Attr("content")
+	c.OnHTML(`script[type="application/ld+json"]`, func(e *colly.HTMLElement) {
+		// letterboxd wraps the JSON in CDATA comment markers; strip them
+		txt := strings.NewReplacer("/* <![CDATA[ */", "", "/* ]]> */", "").Replace(e.Text)
+		var ld map[string]interface{}
+		if err := json.Unmarshal([]byte(txt), &ld); err != nil {
+			return
+		}
+		// JSON-LD "image" is the 600x900 poster (og:image is the
+		// 675x675 backdrop crop, so don't use it)
+		if s, ok := ld["image"].(string); ok && s != "" {
+			movieImgLink = s
+		}
 	})
 
 	c.Visit(movieLink)
